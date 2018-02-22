@@ -225,6 +225,7 @@ func getVmOffset(vmlinux string) (uint32, error) {
 	if v, ok := vmOffsets[vmlinux]; ok {
 		return v, nil
 	}
+	//使用readelf来读取虚拟机的内存offset
 	out, err := osutil.RunCmd(time.Hour, "", "readelf", "-SW", vmlinux)
 	if err != nil {
 		return 0, err
@@ -258,6 +259,7 @@ func getVmOffset(vmlinux string) (uint32, error) {
 	return addr, nil
 }
 
+//使用的是找到代码中callq santizer来读取coverage的信息？使用的是asan的插桩？
 // uncoveredPcsInFuncs returns uncovered PCs with __sanitizer_cov_trace_pc calls in functions containing pcs.
 func uncoveredPcsInFuncs(vmlinux string, pcs []uint64) ([]uint64, error) {
 	<-allSymbolsReady
