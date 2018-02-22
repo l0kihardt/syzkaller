@@ -162,6 +162,7 @@ func main() {
 	calls := buildCallList(target, r.EnabledCalls)
 	ct := target.BuildChoiceTable(r.Prios, calls)
 
+	//linux 内核提供的故障注入功能，对不同的错误进行处理
 	// This requires "fault-inject: support systematic fault injection" kernel commit.
 	faultInjectionEnabled := false
 	if fd, err := syscall.Open("/proc/self/fail-nth", syscall.O_RDWR, 0); err == nil {
@@ -203,6 +204,7 @@ func main() {
 			ExecutorArch:   vers[1],
 		}
 		a.Kcov = kcov
+		//内核泄露检测，检测是否有内存使用了之后没有被释放
 		if fd, err := syscall.Open("/sys/kernel/debug/kmemleak", syscall.O_RDWR, 0); err == nil {
 			syscall.Close(fd)
 			a.Leak = true
@@ -230,6 +232,7 @@ func main() {
 
 	needPoll := make(chan struct{}, 1)
 	needPoll <- struct{}{}
+	//初始化fuzzer
 	fuzzer := &Fuzzer{
 		name:                     *flagName,
 		outputType:               outputType,
@@ -246,6 +249,7 @@ func main() {
 		leakCheckEnabled:         *flagLeak,
 		corpusHashes:             make(map[hash.Sig]struct{}),
 	}
+	
 	fuzzer.gate = ipc.NewGate(2**flagProcs, fuzzer.leakCheckCallback)
 
 	for _, inp := range r.Inputs {
@@ -275,6 +279,7 @@ func main() {
 	}
 
 	for pid := 0; pid < *flagProcs; pid++ {
+		//创建新的进程
 		proc, err := newProc(fuzzer, pid)
 		if err != nil {
 			Fatalf("failed to create proc: %v", err)
@@ -282,7 +287,7 @@ func main() {
 		fuzzer.procs = append(fuzzer.procs, proc)
 		go proc.loop()
 	}
-
+	//调用pollLoop
 	fuzzer.pollLoop()
 }
 
@@ -304,11 +309,12 @@ func (fuzzer *Fuzzer) pollLoop() {
 			lastPrint = time.Now()
 		}
 		if poll || time.Since(lastPoll) > 10*time.Second {
+			//需要新的语料候选
 			needCandidates := fuzzer.workQueue.wantCandidates()
 			if poll && !needCandidates {
 				continue
 			}
-
+			//设置poll的参数
 			a := &PollArgs{
 				Name:           fuzzer.name,
 				NeedCandidates: needCandidates,
@@ -355,6 +361,7 @@ func (fuzzer *Fuzzer) pollLoop() {
 						flags: flags,
 					})
 				} else {
+					//加入语料库中
 					fuzzer.addInputToCorpus(p, nil, hash.Hash(candidate.Prog))
 				}
 			}
