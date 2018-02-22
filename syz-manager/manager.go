@@ -134,11 +134,14 @@ func main() {
 		Fatalf("%v", err)
 	}
 	initAllCover(cfg.Vmlinux)
+	//调用runmanager
 	RunManager(cfg, target, syscalls)
 }
 
 func RunManager(cfg *mgrconfig.Config, target *prog.Target, syscalls map[int]bool) {
+	//创建VM env
 	env := mgrconfig.CreateVMEnv(cfg, *flagDebug)
+	//创建vmpool
 	vmPool, err := vm.Create(cfg.Type, env)
 	if err != nil {
 		Fatalf("%v", err)
@@ -198,8 +201,10 @@ func RunManager(cfg *mgrconfig.Config, target *prog.Target, syscalls map[int]boo
 	case currentDBVersion:
 	}
 	deleted := 0
+	
 	for key, rec := range mgr.corpusDB.Records {
 		p, err := mgr.target.Deserialize(rec.Val)
+		//从db中删除corpus
 		if err != nil {
 			if deleted < 10 {
 				Logf(0, "deleting broken program: %v\n%s", err, rec.Val)
