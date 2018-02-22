@@ -59,7 +59,7 @@ type Manager struct {
 	vmChecked      bool
 	fresh          bool
 	numFuzzing     uint32
-	numReproducing uint32
+	numReproducing uint32 
 
 	dash *dashapi.Dashboard
 
@@ -181,6 +181,7 @@ func RunManager(cfg *mgrconfig.Config, target *prog.Target, syscalls map[int]boo
 	if err != nil {
 		Fatalf("failed to open corpus database: %v", err)
 	}
+	
 	// By default we don't re-minimize/re-smash programs from corpus,
 	// it takes lots of time on start and is unnecessary.
 	// However, on version bumps we can selectively re-minimize/re-smash.
