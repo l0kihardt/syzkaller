@@ -48,7 +48,7 @@ int main(int argc, char** argv)
 		puts(GOOS " " GOARCH " " SYZ_REVISION " " GIT_REVISION);
 		return 0;
 	}
-
+	//父进程死了，子进程也接收SIGKILL信号
 	prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0);
 	if (mmap(&input_data[0], kMaxInput, PROT_READ, MAP_PRIVATE | MAP_FIXED, kInFd, 0) != &input_data[0])
 		fail("mmap of input file failed");
@@ -216,6 +216,7 @@ void loop()
 	}
 }
 
+//执行一个syscall
 long execute_syscall(call_t* c, long a0, long a1, long a2, long a3, long a4, long a5, long a6, long a7, long a8)
 {
 	if (c->call)
@@ -223,6 +224,7 @@ long execute_syscall(call_t* c, long a0, long a1, long a2, long a3, long a4, lon
 	return syscall(c->sys_nr, a0, a1, a2, a3, a4, a5);
 }
 
+//打开coverage
 void cover_open()
 {
 	if (!flag_cover)
@@ -244,6 +246,7 @@ void cover_open()
 	}
 }
 
+//设置coverage为可读
 void cover_enable(thread_t* th)
 {
 	if (!flag_cover)
@@ -258,6 +261,7 @@ void cover_enable(thread_t* th)
 	debug("#%d: enabled /sys/kernel/debug/kcov\n", th->id);
 }
 
+//重置coverage
 void cover_reset(thread_t* th)
 {
 	if (!flag_cover)
@@ -276,6 +280,7 @@ uint64 read_cover_size(thread_t* th)
 	return n;
 }
 
+//输出到output中去
 uint32* write_output(uint32 v)
 {
 	if (collide)
