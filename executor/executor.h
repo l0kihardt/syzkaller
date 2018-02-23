@@ -283,6 +283,7 @@ void receive_execute(bool need_prog)
 		fail("bad input size %lld, want %lld", pos, req.prog_size);
 }
 
+//返回execute执行之后的值
 void reply_execute(int status)
 {
 	execute_reply reply = {};
@@ -305,11 +306,13 @@ retry:
 	write_output(0); // Number of executed syscalls (updated later).
 
 	if (!colliding && !flag_threaded)
+		//初始化覆盖率记录
 		cover_enable(&threads[0]);
 
 	int call_index = 0;
 	for (;;) {
 		uint64 call_num = read_input(&input_pos);
+		//读到了EOF
 		if (call_num == instr_eof)
 			break;
 		if (call_num == instr_copyin) {
@@ -392,6 +395,7 @@ retry:
 			read_input(&input_pos); // addr
 			read_input(&input_pos); // size
 			// The copyout will happen when/if the call completes.
+			//copyout会在调用之后自动发生
 			continue;
 		}
 
@@ -407,6 +411,7 @@ retry:
 			args[i] = read_arg(&input_pos);
 		for (uint64 i = num_args; i < 6; i++)
 			args[i] = 0;
+		
 		thread_t* th = schedule_call(call_index++, call_num, colliding, copyout_index, num_args, args, input_pos);
 
 		if (colliding && (call_index % 2) == 0) {
@@ -451,6 +456,7 @@ retry:
 
 thread_t* schedule_call(int call_index, int call_num, bool colliding, uint64 copyout_index, uint64 num_args, uint64* args, uint64* pos)
 {
+	//找到一个空闲的线程去执行这个call的调用
 	// Find a spare thread to execute the call.
 	int i;
 	for (i = 0; i < kMaxThreads; i++) {
@@ -465,6 +471,7 @@ thread_t* schedule_call(int call_index, int call_num, bool colliding, uint64 cop
 	}
 	if (i == kMaxThreads)
 		exitf("out of threads");
+	//找到了这个thread
 	thread_t* th = &threads[i];
 	debug("scheduling call %d [%s] on thread %d\n", call_index, syscalls[call_num].name, th->id);
 	if (event_isset(&th->ready) || !event_isset(&th->done) || !th->handled)
@@ -614,9 +621,11 @@ void* worker_thread(void* arg)
 	return 0;
 }
 
+//执行系统调用
 void execute_call(thread_t* th)
 {
 	event_reset(&th->ready);
+	//获得第几个系统调用的名字
 	call_t* call = &syscalls[th->call_num];
 	debug("#%d: %s(", th->id, call->name);
 	for (int i = 0; i < th->num_args; i++) {
@@ -627,15 +636,18 @@ void execute_call(thread_t* th)
 	debug(")\n");
 
 	int fail_fd = -1;
+	
 	if (flag_inject_fault && th->call_index == flag_fault_call) {
 		if (collide)
 			fail("both collide and fault injection are enabled");
 		debug("injecting fault into %d-th operation\n", flag_fault_nth);
+		//in common_linux.h 写入到 /proc/thread-self/fail-nth 这个文件当中去
 		fail_fd = inject_fault(flag_fault_nth);
 	}
 
 	cover_reset(th);
 	errno = 0;
+	//调用了execute_syscall去执行syscall
 	th->res = execute_syscall(call, th->args[0], th->args[1], th->args[2],
 				  th->args[3], th->args[4], th->args[5],
 				  th->args[6], th->args[7], th->args[8]);
