@@ -896,6 +896,7 @@ func (mgr *Manager) Connect(a *ConnectArgs, r *ConnectRes) error {
 	return nil
 }
 
+//在执行程序开始之前进行检查
 func (mgr *Manager) Check(a *CheckArgs, r *int) error {
 	mgr.mu.Lock()
 	defer mgr.mu.Unlock()
@@ -908,6 +909,7 @@ func (mgr *Manager) Check(a *CheckArgs, r *int) error {
 	if len(a.Calls) == 0 {
 		Fatalf("no system calls enabled")
 	}
+	//kcov是用来检测覆盖率的，如果这个文件不存在的话，那么就不能够继续的执行下去了。
 	if mgr.cfg.Cover && !a.Kcov {
 		Fatalf("/sys/kernel/debug/kcov is missing. Enable CONFIG_KCOV and mount debugfs")
 	}
@@ -926,6 +928,7 @@ func (mgr *Manager) Check(a *CheckArgs, r *int) error {
 		Fatalf("mismatching syscall descriptions:\nmanager= %v\nfuzzer=  %v\nexecutor=%v",
 			mgr.target.Revision, a.FuzzerSyzRev, a.ExecutorSyzRev)
 	}
+	//设置flag标志
 	mgr.vmChecked = true
 	mgr.enabledCalls = a.Calls
 	return nil
